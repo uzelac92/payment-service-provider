@@ -1,0 +1,7 @@
+{
+  "name": "payment-service-provider",
+  "private": "true",
+  "workspaces": [
+    "services/*"
+  ]
+}
