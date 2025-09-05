@@ -1,4 +1,4 @@
-// src/middlewares/validate.transaction.js
+// src/middlewares/validators/validate.transaction.js
 const {celebrate, Joi, Segments} = require('celebrate');
 
 // Example schemas (copy pattern per route)
