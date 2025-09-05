@@ -10,7 +10,7 @@ const app = express();
 app.use([express.json({limit: '1mb'}), express.urlencoded({extended: true})]);
 app.use(helmet());
 app.use(cors({origin: true}));
-app.use(hpp)
+app.use(hpp());
 
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
 else app.use(morgan('tiny'));

@@ -12,7 +12,7 @@ app.use(express.json({limit: '1mb'}));
 app.use(express.urlencoded({extended: true}));
 // security
 app.use(helmet());
-app.use(hpp);
+app.use(hpp());
 app.use(cors({origin: true}));
 
 // DEV logging: morgan to console
