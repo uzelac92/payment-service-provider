@@ -20,4 +20,16 @@ else app.use(morgan("tiny"));
 
 app.use("/users", routes);
 
+app.use((req, res) => {
+    res.status(404).json({error: 'NotFound', message: `Route ${req.method} ${req.originalUrl} not found`});
+});
+
+app.use((err, req, res, _next) => {
+    const status = err.status || 500;
+    res.status(status).json({
+        error: err.name || 'InternalServerError',
+        message: status === 500 ? 'Something went wrong' : err.message,
+    });
+});
+
 module.exports = app;
