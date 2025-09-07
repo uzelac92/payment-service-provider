@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage:
-#   scripts/release-payment-models.sh [patch|minor|major|prerelease] [--preid beta] [--dry]
-
 BUMP_TYPE="${1:-patch}"
 PREID=""
 DRYRUN="false"
@@ -20,7 +17,6 @@ done
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
-# Safety
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "❌ Working tree not clean. Commit or stash changes first."; exit 1
 fi
@@ -44,22 +40,18 @@ if [[ "$DRYRUN" == "true" ]]; then
   echo "🧪 Dry run:"; printf '  %q ' "${CMD[@]}"; echo; exit 0
 fi
 
-# Run version bump (prints like 'v1.0.7')
-NEW_VER_RAW="$("${CMD[@]}")"
-NEW_VER="${NEW_VER_RAW#v}"                     # strip leading v if present
-NEW_TAG="payment-models-v${NEW_VER}"
+# Run version bump (this creates the git tag automatically)
+"${CMD[@]}"
 
+# Read the new plain version from package.json
+NEW_VER="$(node -p "require('./package.json').version")"
+NEW_TAG="payment-models-v${NEW_VER}"
 echo "🏷️  Created git tag: ${NEW_TAG}"
 
 cd "$ROOT_DIR"
 
-# Push commit and tag
-git push origin "$CURRENT_BRANCH" --follow-tags
-# Also push the tag explicitly (belt & suspenders)
+# Push branch and that specific tag
+git push origin "$CURRENT_BRANCH"
 git push origin "$NEW_TAG"
-
-# Local sanity check
-echo "🔎 Local tags matching pattern:"
-git tag --list 'payment-models-v*' | tail -n 5
 
 echo "✅ Pushed. GitHub Actions should publish @uzelac92/payment-models on tag: ${NEW_TAG}"
