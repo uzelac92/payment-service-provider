@@ -1,6 +1,6 @@
 {
   "name": "@uzelac92/payment-models",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Mongoose model factories for the payments bounded context",
   "license": "MIT",
   "type": "commonjs",
