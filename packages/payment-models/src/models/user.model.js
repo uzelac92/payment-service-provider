@@ -6,6 +6,7 @@ const SALT_ROUNDS = 12;
 
 const UserSchema = new Schema(
     {
+        _id: {type: Schema.Types.ObjectId, default: () => new Types.ObjectId()},
         name: {
             type: String,
             required: true,
@@ -42,6 +43,9 @@ const UserSchema = new Schema(
         versionKey: false,
         toJSON: {
             transform(_doc, ret) {
+                ret.id = ret._id.toString();
+                delete ret._id;
+
                 delete ret.password;
                 delete ret.secret;
                 delete ret.resetPasswordCode;

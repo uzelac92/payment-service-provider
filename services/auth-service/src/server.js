@@ -1,11 +1,12 @@
 require("dotenv").config();
 const app = require("./app")
-const {connectMongo} = require("./db/mongo")
+const {connectAuthMongo, connectUserMongo} = require("./db/mongo")
 
 const PORT = process.env.PORT || 4000;
 
 (async () => {
-    await connectMongo();
+    await connectAuthMongo();
+    await connectUserMongo();
     app.listen(PORT, () => {
         console.log(`Starting auth-service on port ${PORT}`);
     });

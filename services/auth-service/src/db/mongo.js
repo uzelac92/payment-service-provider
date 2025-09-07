@@ -1,11 +1,12 @@
 const mongoose = require("mongoose");
 
-let isConnected = false;
+let authConn;
+let userConn;
 
-async function connectMongo(uri = process.env.MONGO_URI) {
+async function connectAuthMongo(uri = process.env.MONGO_URI) {
     if (!uri) throw new Error("MongoDB URI is required");
 
-    if (!isConnected) return mongoose.connection;
+    if (authConn) return authConn;
 
     const opts = {
         maxPoolSize: 20,
@@ -14,23 +15,50 @@ async function connectMongo(uri = process.env.MONGO_URI) {
         socketTimeoutMS: 20000
     }
 
-    mongoose.connection.on("connected", () => {
-        isConnected = true;
+    authConn = mongoose.createConnection(uri, opts)
+
+    authConn.on("connected", () => {
         console.log("MongoDB Connected");
     })
 
-    mongoose.connection.on("disconnected", () => {
-        isConnected = false;
+    authConn.on("disconnected", () => {
         console.warn("MongoDB Disconnected");
     })
 
-    mongoose.connection.on("error", (err) => {
-        isConnected = false;
+    authConn.on("error", (err) => {
         console.error(`MongoDB Connection Error: ${err}`);
     })
 
-    await mongoose.connect(uri, opts);
-    return mongoose.connection
+    return authConn.asPromise()
 }
 
-module.exports = {connectMongo};
+async function connectUserMongo(uri = process.env.USER_DB_URL) {
+    if (!uri) throw new Error("MongoDB URI is required");
+
+    if (userConn) return userConn;
+
+    const opts = {
+        maxPoolSize: 20,
+        minPoolSize: 2,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 20000
+    }
+
+    userConn = mongoose.createConnection(uri, opts)
+
+    userConn.on("connected", () => {
+        console.log("MongoDB Connected");
+    })
+
+    userConn.on("disconnected", () => {
+        console.warn("MongoDB Disconnected");
+    })
+
+    userConn.on("error", (err) => {
+        console.error(`MongoDB Connection Error: ${err}`);
+    })
+
+    return userConn.asPromise()
+}
+
+module.exports = {connectAuthMongo, connectUserMongo};
