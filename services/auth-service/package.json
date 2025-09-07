@@ -12,7 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@uzelac92/payment-models": "^1.0.4",
+    "@uzelac92/payment-models": "^1.0.6",
     "bcryptjs": "^3.0.2",
     "celebrate": "^15.0.3",
     "cors": "^2.8.5",
