@@ -1,0 +1,27 @@
+name: Publish @uzelac92/payment-models
+
+on:
+  push:
+    tags:
+      - "payment-models-v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/payment-models
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set up npmrc with your secret token
+      - run: echo "@uzelac92:registry=https://npm.pkg.github.com" > ~/.npmrc
+      - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACARIA_NPM_TOKEN }}" >> ~/.npmrc
+
+      # Install deps and publish
+      - run: npm ci
+      - run: npm publish
