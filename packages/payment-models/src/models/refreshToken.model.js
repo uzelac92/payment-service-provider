@@ -1,21 +1,24 @@
-const {Schema} = require('mongoose');
+const {Schema} = require("mongoose");
 
 module.exports = function makeRefreshTokenModel(conn) {
     const RefreshTokenSchema = new Schema(
         {
-            _id: {type: String, required: true},                 // jti
+            _id: {type: String, required: true}, // jti
             userId: {type: String, required: true, index: true},
-            aud: {type: String, required: true, enum: ['client', 'processing'], index: true},
+            aud: {type: String, required: true, enum: ["client", "processing"], index: true},
             tokenHash: {type: String, required: true},
-            // REMOVE inline index here to avoid duplicate index; TTL index below is enough
+
+            // fast lookup
+            fingerprint: {type: String, index: true}, // sha256(raw) base64/hex
+
             expiresAt: {type: Date, required: true},
             createdAt: {type: Date, default: () => new Date()},
             createdByIp: {type: String},
             revokedAt: {type: Date, default: null},
             revokedByIp: {type: String, default: null},
-            replacedBy: {type: String, default: null},
+            replacedBy: {type: String, default: null}, // for rotation chains
         },
-        {collection: 'refresh_tokens', versionKey: false}
+        {collection: "refresh_tokens", versionKey: false}
     );
 
     // Helpful query index
@@ -24,5 +27,8 @@ module.exports = function makeRefreshTokenModel(conn) {
     // TTL: delete as soon as expiresAt is in the past
     RefreshTokenSchema.index({expiresAt: 1}, {expireAfterSeconds: 0});
 
-    return conn.models.RefreshToken || conn.model('RefreshToken', RefreshTokenSchema);
+    return (
+        conn.models.RefreshToken ||
+        conn.model("RefreshToken", RefreshTokenSchema)
+    );
 };
