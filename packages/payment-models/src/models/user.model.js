@@ -12,7 +12,7 @@ module.exports = function makeUserModel(conn) {
                 required: true,
                 trim: true,
                 validate: {
-                    validator: (v) => (v == null || v === "") || (v.length >= 2 && v.length <= 100),
+                    validator: (v) => typeof v === "string" && v.length >= 2 && v.length <= 100,
                     message: "Name must be 2-100 characters long",
                 },
             },
@@ -31,11 +31,14 @@ module.exports = function makeUserModel(conn) {
             },
 
             isActive: {type: Boolean, default: false, index: true},
-            emailVerifiedAt: {type: Date, default: null},   // optional if you want to track
-            resetPasswordCode: {type: String, select: false},   // (optional) if user-service sends emails for reset
+            emailVerifiedAt: {type: Date, default: null},
+
+            // Keep only if you still plan to drive reset from user-service
+            // Otherwise remove to simplify the profile model.
+            resetPasswordCode: {type: String, select: false},
             resetPasswordCodeExpiry: {type: Date, select: false},
 
-            lastLoginAt: {type: Date, default: Date.now},   // optional; can also be in auth
+            lastLoginAt: {type: Date, default: Date.now},
         },
         {
             collection: "users",
@@ -47,9 +50,6 @@ module.exports = function makeUserModel(conn) {
                     ret.id = ret._id.toString();
                     delete ret._id;
 
-                    // ensure no legacy leakage
-                    delete ret.password;
-                    delete ret.secret;
                     delete ret.resetPasswordCode;
                     delete ret.resetPasswordCodeExpiry;
                     return ret;
@@ -58,8 +58,13 @@ module.exports = function makeUserModel(conn) {
         }
     );
 
-    // keep collation-aware unique index
+    // Case-insensitive unique email
     UserSchema.index({email: 1}, {unique: true, collation: {locale: "en", strength: 2}});
+
+    UserSchema.statics.findByEmailNormalized = function (email) {
+        const trimmed = String(email || "").toLowerCase().trim();
+        return this.findOne({email: trimmed}).collation({locale: "en", strength: 2});
+    };
 
     return conn.models.User || conn.model("User", UserSchema);
 };
