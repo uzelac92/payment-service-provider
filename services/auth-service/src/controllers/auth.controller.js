@@ -2,6 +2,7 @@ const {InternalServerError, BadRequest, NotFound, Unauthorized, Forbidden} = req
 const {verifyPasswordWithSecret} = require("../utils/password");
 const {signAccess, verifyAccessFor} = require("../utils/jwt")
 const {issueRefreshToken, rotateRefreshToken} = require("../services/token.service")
+const bcrypt = require('bcryptjs');
 
 let RefreshToken;
 
@@ -113,5 +114,27 @@ exports.validate = async (req, res) => {
         res.json({valid: true, claims, audience: aud});
     } catch (e) {
         res.status(401).json(Unauthorized("Invalid or wrong audience"));
+    }
+}
+
+exports.logout = async (req, res) => {
+    try {
+        const {refreshToken} = req.body || {};
+        if (!refreshToken) return res.status(400).json(BadRequest("Refresh Token required"));
+
+        const now = new Date();
+        const active = await RefreshToken.find({revokedAt: null, expiresAt: {$gt: now}});
+        for (const t of active) {
+            if (await bcrypt.compare(refreshToken, t.tokenHash)) {
+                await RefreshToken.updateOne(
+                    {_id: t._id},
+                    {$set: {revokedAt: new Date(), revokedByIp: req.ip}}
+                );
+                break;
+            }
+        }
+        res.json({ok: true});
+    } catch (e) {
+        res.status(500).json(InternalServerError("Logout Failed"));
     }
 }

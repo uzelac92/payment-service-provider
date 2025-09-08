@@ -1,9 +1,9 @@
-require("dotenv").config();
 const express = require("express");
 const helmet = require("helmet");
 const hpp = require("hpp");
 const cors = require("cors");
 const morgan = require("morgan");
+const routes = require('./routes/auth.route');
 
 const app = express();
 
@@ -15,8 +15,6 @@ app.use(hpp());
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
 else app.use(morgan('tiny'));
 
-app.get("/", (req, res) => {
-    res.send("Welcome to auth service.")
-})
+app.use("/api/client", routes)
 
 module.exports = app;

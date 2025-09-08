@@ -61,4 +61,12 @@ async function connectUserMongo(uri = process.env.USER_DB_URL) {
     return userConn.asPromise()
 }
 
-module.exports = {connectAuthMongo, connectUserMongo};
+function getAuthConn() {
+    return authConn;
+}
+
+function getUserConn() {
+    return userConn;
+}
+
+module.exports = {connectAuthMongo, connectUserMongo, getAuthConn, getUserConn};
