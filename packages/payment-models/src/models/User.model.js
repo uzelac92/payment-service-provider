@@ -33,11 +33,7 @@ module.exports = function makeUserModel(conn) {
             isActive: {type: Boolean, default: false, index: true},
             emailVerifiedAt: {type: Date, default: null},
 
-            // Keep only if you still plan to drive reset from user-service
-            // Otherwise remove to simplify the profile model.
-            resetPasswordCode: {type: String, select: false},
-            resetPasswordCodeExpiry: {type: Date, select: false},
-
+            // Optional, only if you want to track it here; otherwise move to auth
             lastLoginAt: {type: Date, default: Date.now},
         },
         {
@@ -49,9 +45,6 @@ module.exports = function makeUserModel(conn) {
                 transform(_doc, ret) {
                     ret.id = ret._id.toString();
                     delete ret._id;
-
-                    delete ret.resetPasswordCode;
-                    delete ret.resetPasswordCodeExpiry;
                     return ret;
                 },
             },

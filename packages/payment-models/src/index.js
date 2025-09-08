@@ -1,7 +1,7 @@
 // packages/payment-models/src/index.js
 module.exports = {
-    makeUserModel: require('./models/user.model'),
-    makeRefreshTokenModel: require('./models/refreshToken.model'),
-    makeAuthCredentialModel: require('./models/authCredential.model'),
+    makeUserModel: require('./models/User.model'),
+    makeRefreshTokenModel: require('./models/RefreshToken.model'),
+    makeAuthCredentialModel: require('./models/AuthCredential.model'),
     ...require('./shared/error'),
 };
