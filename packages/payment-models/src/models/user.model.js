@@ -42,8 +42,6 @@ module.exports = function makeUserModel(conn) {
             password: {type: String, required: true, trim: true, select: false},
             secret: {type: String, required: true, select: false},
 
-            role: {type: String, enum: ['User', 'Merchant', 'Admin'], default: 'User'},
-
             isActive: {type: Boolean, default: false, index: true},
 
             resetPasswordCode: {type: String, select: false},
