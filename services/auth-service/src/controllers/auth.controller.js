@@ -1,10 +1,11 @@
-const {InternalServerError, BadRequest, NotFound, Unauthorized, Forbidden} = require("@uzelac92/payment-models")
+const {InternalServerError, BadRequest, Unauthorized, Forbidden} = require("@uzelac92/payment-models")
 const {verifyPasswordWithSecret} = require("../utils/password");
 const {signAccess, verifyAccessFor} = require("../utils/jwt")
 const {issueRefreshToken, rotateRefreshToken} = require("../services/token.service")
 const bcrypt = require('bcryptjs');
 
 let RefreshToken;
+let AuthCredential;
 
 const allowedAud = new Set(
     process.env.JWT_AUDIENCES?.split(",").map(s => s.trim()).filter(Boolean)
@@ -15,7 +16,7 @@ let getUserByEmail = async (_email) => {
 }
 
 function guardAudience(req, audience) {
-    if (!allowedAud.has(audience)) return NotFound("Invalid Audience")
+    if (!allowedAud.has(audience)) return Forbidden("Invalid Audience")
     if (audience === "processing") {
         const key = req.headers["x-audience-key"] || "";
         if (key !== (process.env.PAYMENT_AUDIENCE_KEY || "")) {
@@ -25,9 +26,10 @@ function guardAudience(req, audience) {
     return null
 }
 
-exports.init = ({refreshToken, resolveUserByEmail}) => {
-    RefreshToken = refreshToken
+exports.init = ({refreshToken, resolveUserByEmail, AuthCredentialModel}) => {
     if (resolveUserByEmail) getUserByEmail = resolveUserByEmail;
+    RefreshToken = refreshToken
+    AuthCredential = AuthCredentialModel
 }
 
 exports.login = async (req, res) => {
@@ -43,14 +45,15 @@ exports.login = async (req, res) => {
         }
 
         const user = await getUserByEmail(String(email).toLowerCase())
-        if (!user || !user.isActive) {
+        if (!user || !user._id || !user.isActive) {
             return res.status(401).json(Unauthorized("Invalid credentials"))
         }
 
-        const verifyErr = await verifyPasswordWithSecret(password, user.secret, user.password)
-        if (verifyErr != null) {
-            return res.status(verifyErr.status).json(verifyErr)
-        }
+        const cred = await AuthCredential.findOne({userId: user._id}).lean();
+        if (!cred) return res.status(401).json(Unauthorized("Invalid credentials"));
+
+        const verifyErr = await verifyPasswordWithSecret(password, cred.secret, cred.passwordHash);
+        if (verifyErr) return res.status(verifyErr.status).json(verifyErr);
 
         const accessToken = signAccess(
             {sub: user._id, email: user.email},
@@ -79,7 +82,7 @@ exports.login = async (req, res) => {
 exports.refresh = async (req, res) => {
     try {
         const {refreshToken} = req.body || {};
-        if (!refreshToken) return res.status(401).json(BadRequest("Refresh Token required"));
+        if (!refreshToken) return res.status(400).json(BadRequest("Refresh Token required"));
 
         const {userId, aud, refreshRaw} = await rotateRefreshToken({
             RefreshToken,
@@ -122,19 +125,47 @@ exports.logout = async (req, res) => {
         const {refreshToken} = req.body || {};
         if (!refreshToken) return res.status(400).json(BadRequest("Refresh Token required"));
 
-        const now = new Date();
-        const active = await RefreshToken.find({revokedAt: null, expiresAt: {$gt: now}});
-        for (const t of active) {
-            if (await bcrypt.compare(refreshToken, t.tokenHash)) {
-                await RefreshToken.updateOne(
-                    {_id: t._id},
-                    {$set: {revokedAt: new Date(), revokedByIp: req.ip}}
-                );
-                break;
-            }
+        const fp = crypto.createHash("sha256").update(refreshToken, "utf8").digest("base64");
+        const t = await RefreshToken.findOne({fingerprint: fp, revokedAt: null, expiresAt: {$gt: new Date()}});
+        if (t && await bcrypt.compare(refreshToken, t.tokenHash)) {
+            await RefreshToken.updateOne(
+                {_id: t._id},
+                {$set: {revokedAt: new Date(), revokedByIp: req.ip}}
+            );
         }
         res.json({ok: true});
     } catch (e) {
+        console.error("[auth/logout]", e);
         res.status(500).json(InternalServerError("Logout Failed"));
     }
 }
+
+exports.changePassword = async (req, res) => {
+    try {
+        const {userId, newPassword, newSecret} = req.body || {};
+        if (!userId || !newPassword || !newSecret) {
+            return res.status(400).json(BadRequest("userId, newPassword, newSecret required"));
+        }
+
+        const authz = req.headers.authorization || "";
+        const token = authz.startsWith("Bearer ") ? authz.slice(7) : null;
+        if (!token) return res.status(401).json(Unauthorized("Invalid Credentials"));
+
+        const verify = verifyAccessFor("client"); // or the audience you expect here
+        const claims = verify(token);
+        if (!claims?.sub || claims.sub !== userId) {
+            return res.status(403).json(Forbidden("Not allowed"));
+        }
+
+        const passwordHash = await bcrypt.hash(newPassword, Number(process.env.BCRYPT_ROUNDS || 10));
+        await AuthCredential.updateOne(
+            {userId},
+            {$set: {passwordHash, secret: newSecret, passwordUpdatedAt: new Date()}},
+            {upsert: true}
+        );
+        res.sendStatus(204);
+    } catch (e) {
+        console.error("[auth/change-password]", e);
+        res.status(500).json(InternalServerError("Change password failed"));
+    }
+};
