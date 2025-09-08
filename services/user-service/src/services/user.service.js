@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const User = require("@uzelac92/payment-models");
-const {InternalServerError, BadRequest, NotFound, Conflict} = require("../error");
+const {InternalServerError, BadRequest, NotFound, Conflict} = require("@uzelac92/payment-models");
 
 function parseBool(v) {
     if (v === undefined) return undefined;

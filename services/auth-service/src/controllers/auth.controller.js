@@ -1,7 +1,7 @@
-const {InternalServerError, BadRequest, NotFound} = require("../error")
+const {InternalServerError, BadRequest, NotFound, Unauthorized, Forbidden} = require("@uzelac92/payment-models")
 const {verifyPasswordWithSecret} = require("../utils/password");
 const {signAccess, verifyAccessFor} = require("../utils/jwt")
-const {issueRefreshToken} = require("../services/token.service")
+const {issueRefreshToken, rotateRefreshToken} = require("../services/token.service")
 
 let RefreshToken;
 
@@ -18,7 +18,7 @@ function guardAudience(req, audience) {
     if (audience === "processing") {
         const key = req.headers["x-audience-key"] || "";
         if (key !== (process.env.PAYMENT_AUDIENCE_KEY || "")) {
-            return NotFound("Forbidden Audience")
+            return Forbidden("Forbidden Audience")
         }
     }
     return null
@@ -43,7 +43,7 @@ exports.login = async (req, res) => {
 
         const user = await getUserByEmail(String(email).toLowerCase())
         if (!user || !user.isActive) {
-            return res.status(401).json(BadRequest("Invalid credentials"))
+            return res.status(401).json(Unauthorized("Invalid credentials"))
         }
 
         const verifyErr = await verifyPasswordWithSecret(password, user.secret, user.password)
@@ -75,3 +75,43 @@ exports.login = async (req, res) => {
     }
 }
 
+exports.refresh = async (req, res) => {
+    try {
+        const {refreshToken} = req.body || {};
+        if (!refreshToken) return res.status(401).json(BadRequest("Refresh Token required"));
+
+        const {userId, aud, refreshRaw} = await rotateRefreshToken({
+            RefreshToken,
+            raw: refreshToken,
+            ip: req.ip
+        })
+
+        const accessToken = signAccess({sub: userId}, aud)
+        res.json({
+            accessToken,
+            refreshToken: refreshRaw,
+            audience: aud,
+            tokenType: 'Bearer',
+            expiresIn: process.env.JWT_EXPIRES || '15m'
+        })
+    } catch (e) {
+        console.error('[auth/refresh]', e);
+        res.status(401).json(Unauthorized("Refresh Token invalid"));
+    }
+}
+
+exports.validate = async (req, res) => {
+    try {
+        const aud = (req.query.aud || "").trim()
+        const verify = verifyAccessFor(aud)
+
+        const authorization = req.headers["authorization"] || ""
+        const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : null;
+        if (!token) return res.status(401).json(Unauthorized("Invalid Credentials"));
+
+        const claims = verify(token);
+        res.json({valid: true, claims, audience: aud});
+    } catch (e) {
+        res.status(401).json(Unauthorized("Invalid or wrong audience"));
+    }
+}
