@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const User = require("@uzelac92/payment-models");
 const {InternalServerError, BadRequest, NotFound, Conflict} = require("@uzelac92/payment-models");
 
 function parseBool(v) {
@@ -7,7 +6,7 @@ function parseBool(v) {
     return v === true || v === "true" || v === "1";
 }
 
-async function create(data) {
+async function create({User, data}) {
     if (!data?.email || !data?.password) throw BadRequest("Email and password are required");
 
     const payload = {
@@ -27,7 +26,7 @@ async function create(data) {
     }
 }
 
-async function getAll(q = {}) {
+async function getAll({User, q = {}}) {
     const page = Math.max(parseInt(q.page ?? "1", 10), 1);
     const limit = Math.min(Math.max(parseInt(q.limit ?? "20", 10), 1), 100);
     const skip = (page - 1) * limit;
@@ -54,7 +53,7 @@ async function getAll(q = {}) {
     }
 }
 
-async function getSingle(query) {
+async function getSingle({User, query}) {
     if (!query.id && !query.email) throw BadRequest("Provide id or email");
 
     let user;
@@ -75,7 +74,7 @@ async function getSingle(query) {
     return user;
 }
 
-async function update(id, data) {
+async function update({User, id, data}) {
     if (!mongoose.Types.ObjectId.isValid(id)) throw BadRequest("Invalid id");
 
     const ALLOWED = ["name", "email", "isActive"];
@@ -99,7 +98,7 @@ async function update(id, data) {
     return updated;
 }
 
-async function remove(id) {
+async function remove({User, id}) {
     if (!mongoose.Types.ObjectId.isValid(id)) throw BadRequest("Invalid id");
 
     let res;

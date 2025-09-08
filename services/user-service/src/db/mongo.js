@@ -1,36 +1,26 @@
 const mongoose = require('mongoose');
 
-let isConnected = false;
+let userConn;
 
-async function connectMongo(uri = process.env.MONGO_URI) {
-    if (!uri) throw new Error('MongoDB URI is required');
+async function connectUserMongo(uri = process.env.MONGO_URI) {
+    if (!uri) throw new Error('MONGO_URI is required for user-service');
+    if (userConn) return userConn;
 
-    if (isConnected) return mongoose.connection
-
-    const opts = {
+    userConn = mongoose.createConnection(uri, {
         maxPoolSize: 20,
-        minPoolSize: 2,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 20000
-    }
-
-    mongoose.connection.on("connected", () => {
-        isConnected = true;
-        console.log(`MongoDB Connected (${process.env.SERVICE_NAME || 'service'}`);
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 20000,
     });
 
-    mongoose.connection.on("disconnected", () => {
-        isConnected = false;
-        console.warn('MongoDB Disconnected');
-    })
+    userConn.on('connected', () => console.log('[user_db] connected'));
+    userConn.on('disconnected', () => console.warn('[user_db] disconnected'));
+    userConn.on('error', (err) => console.error('[user_db] error:', err));
 
-    mongoose.connection.on("error", (err) => {
-        isConnected = false;
-        console.error(`MongoDB Connection error: ${err}`);
-    })
-
-    await mongoose.connect(uri, opts);
-    return mongoose.connection
+    return userConn.asPromise();
 }
 
-module.exports = {connectMongo};
+function getUserConn() {
+    return userConn;
+}
+
+module.exports = {connectUserMongo, getUserConn};

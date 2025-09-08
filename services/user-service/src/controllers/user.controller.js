@@ -1,8 +1,15 @@
 const svc = require('../services/user.service');
 
+
+let User;
+
+async function init({user}) {
+    User = user
+}
+
 async function create(req, res, next) {
     try {
-        res.status(201).json(await svc.create(req.body));
+        res.status(201).json(await svc.create({User, data: req.body}));
     } catch (e) {
         next(e);
     }
@@ -10,7 +17,7 @@ async function create(req, res, next) {
 
 async function getAll(req, res, next) {
     try {
-        res.json(await svc.getAll(req.query));
+        res.json(await svc.getAll({User, q: req.query}));
     } catch (e) {
         next(e);
     }
@@ -18,7 +25,7 @@ async function getAll(req, res, next) {
 
 async function getSingle(req, res, next) {
     try {
-        res.json(await svc.getSingle(req.query));
+        res.json(await svc.getSingle({User, query: req.query}));
     } catch (e) {
         next(e);
     }
@@ -26,7 +33,7 @@ async function getSingle(req, res, next) {
 
 async function update(req, res, next) {
     try {
-        res.json(await svc.update(req.params.id, req.body));
+        res.json(await svc.update({User, id: req.params.id, data: req.body}));
     } catch (e) {
         next(e);
     }
@@ -34,11 +41,11 @@ async function update(req, res, next) {
 
 async function remove(req, res, next) {
     try {
-        await svc.remove(req.params.id);
+        await svc.remove({User, id: req.params.id});
         res.status(204).end();
     } catch (e) {
         next(e);
     }
 }
 
-module.exports = {create, getAll, getSingle, update, remove};
+module.exports = {create, getAll, getSingle, update, remove, init};
