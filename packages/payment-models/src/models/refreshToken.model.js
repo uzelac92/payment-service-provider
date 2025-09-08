@@ -25,5 +25,5 @@ module.exports = function makeRefreshTokenModel(conn) {
     // TTL: delete as soon as expiresAt is in the past
     RefreshTokenSchema.index({expiresAt: 1}, {expireAfterSeconds: 0});
 
-    return conn.model('RefreshToken', RefreshTokenSchema);
+    return conn.models.RefreshToken || conn.model('RefreshToken', RefreshTokenSchema);
 };
