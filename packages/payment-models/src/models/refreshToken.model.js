@@ -1,4 +1,3 @@
-// packages/payment-models/src/models/refreshToken.model.js
 const {Schema} = require('mongoose');
 
 module.exports = function makeRefreshTokenModel(conn) {

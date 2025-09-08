@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const {InternalServerError, BadRequest, NotFound, Conflict} = require("@uzelac92/payment-models");
+const {Forbidden} = require("@uzelac92/payment-models/src/shared/error");
 
 function parseBool(v) {
     if (v === undefined) return undefined;
@@ -93,7 +94,6 @@ async function update({User, id, data}) {
         throw InternalServerError();
     }
 
-    // ⬇️ outside the try
     if (!updated) throw NotFound("User not found");
     return updated;
 }
@@ -109,9 +109,36 @@ async function remove({User, id}) {
         throw InternalServerError();
     }
 
-    // ⬇️ outside the try
     if (!res) throw NotFound("User not found");
     return true;
 }
 
-module.exports = {create, getAll, getSingle, update, remove};
+async function resolveByEmail({User, key, email = ""}) {
+    if (key !== process.env.USER_SERVICE_KEY) {
+        throw Forbidden("Invalid service key")
+    }
+    const trimmed = String(email || "").toLowerCase().trim();
+    if (!trimmed) throw BadRequest("Invalid email address");
+
+    let user;
+    try {
+        user = await User.findOne({email})
+            .select("+password +secret +isActive")
+            .lean();
+    } catch (e) {
+        if (e?.status) throw e;
+        throw InternalServerError();
+    }
+
+    if (!user) throw NotFound("User not found");
+
+    return {
+        _id: user._id,
+        email: user.email,
+        isActive: !!user.isActive,
+        password: user.password,
+        secret: user.secret
+    }
+}
+
+module.exports = {create, getAll, getSingle, update, remove, resolveByEmail};

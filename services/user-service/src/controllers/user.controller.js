@@ -48,4 +48,16 @@ async function remove(req, res, next) {
     }
 }
 
-module.exports = {create, getAll, getSingle, update, remove, init};
+async function resolveByEmail(req, res, next) {
+    const key = req.headers["x-internal-key"] || "";
+
+
+    try {
+        const response = svc.resolveByEmail({User, key, email: req.query.email})
+        res.json(response);
+    } catch (e) {
+        next(e)
+    }
+}
+
+module.exports = {init, create, getAll, getSingle, update, remove, resolveByEmail};
