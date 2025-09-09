@@ -93,7 +93,8 @@ async function remove({Mid, id}) {
 
     let res;
     try {
-        res = await Mid.findByIdAndDelete(id);
+        await Mid.findByIdAndDelete(id);
+        //res = await Mid.findByIdAndDelete(id);
     } catch (e) {
         //throw InternalServerError();
     }
