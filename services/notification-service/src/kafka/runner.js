@@ -5,7 +5,7 @@ const {handlePasswordResetRequested} = require("./consumers/password.reset");
 let consumer;
 
 async function startKafka() {
-    consumer = kafka.consumer({groupId: "notification-users-created"})
+    consumer = kafka.consumer({groupId: "pacaria-notification"})
 
     await consumer.connect();
     await consumer.subscribe({topic: "users.created.v1", fromBeginning: false})
