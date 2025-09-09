@@ -224,15 +224,15 @@ exports.verifyCodeEndpoint = async (req, res) => {
             return res.status(400).json(BadRequest("Bad Request"));
         }
 
-        const result = await verifyCode({
+        const err = await verifyCode({
             VerificationCode,
             userId: user_id,
             email,
             purpose,
             code,
         });
-        if (!result.ok) {
-            return res.status(400).json(BadRequest(result.error));
+        if (err != null) {
+            return res.status(err.code).json(err);
         }
 
         const expiresMin = Number(process.env.VERIF_SESSION_MIN || 10);
@@ -351,14 +351,11 @@ exports.requestPasswordReset = async (req, res) => {
                 event: "auth.password_reset.requested",
                 user_id: String(user._id),
                 email: user.email,
-                // In prod, you can omit raw code if you prefer; your current pattern is to have
-                // notification-service call /auth/verification itself. If you keep this, include:
-                code,               // keep for simplicity now; safe because it stays internal
+                code,
                 ttlMin,
                 requestedAt: new Date().toISOString(),
             }, user._id);
         } catch (e) {
-            // don’t fail user flow if Kafka is down
             console.error("[auth] publish reset event failed:", e.message);
         }
 

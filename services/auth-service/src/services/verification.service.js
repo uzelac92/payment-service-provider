@@ -1,3 +1,4 @@
+const {Unauthorized} = require("@uzelac92/payment-models")
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
@@ -27,16 +28,16 @@ exports.verifyCode = async ({VerificationCode, userId, email, purpose, code}) =>
         .findOne({userId, purpose, consumedAt: null, expiresAt: {$gt: new Date()}})
         .sort({createdAt: -1});
 
-    if (!rec) return {ok: false, error: "invalid_or_expired"};
-    if (sha256b64(email) !== rec.emailHash) return {ok: false, error: "email_changed"};
-    if (rec.attempts >= rec.maxAttempts) return {ok: false, error: "too_many_attempts"};
+    if (!rec) return Unauthorized("Invalid or expired")
+    if (sha256b64(email) !== rec.emailHash) return Unauthorized("Email changed")
+    if (rec.attempts >= rec.maxAttempts) return Unauthorized("Too many attempts");
 
     const ok = await bcrypt.compare(String(code), rec.codeHash);
     if (!ok) {
         await VerificationCode.updateOne({_id: rec._id}, {$inc: {attempts: 1}});
-        return {ok: false, error: "invalid_code"};
+        return Unauthorized("Invalid code");
     }
 
     await VerificationCode.updateOne({_id: rec._id}, {$set: {consumedAt: new Date()}});
-    return {ok: true};
+    return null;
 };
