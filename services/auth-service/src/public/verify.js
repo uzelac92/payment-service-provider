@@ -2,7 +2,6 @@
     const purpose = window.__VERIFY_PURPOSE__;
     const qs = (id) => document.getElementById(id);
 
-    // Cache DOM once
     const els = {
         uid: qs("uid"),
         eml: qs("eml"),
@@ -25,7 +24,6 @@
             (window.crypto || window.msCrypto).getRandomValues(arr);
             return Array.from(arr).map((b) => b.toString(16).padStart(2, "0")).join("");
         } catch {
-            // Fallback: not cryptographically strong, but fine for a per-request salt
             return (
                 Math.random().toString(16).slice(2) +
                 Math.random().toString(16).slice(2)
@@ -53,7 +51,6 @@
                     body: JSON.stringify(payload),
                 });
 
-                // Avoid throwing: compute error message instead
                 if (!res.ok) {
                     let data = null;
                     try {
@@ -105,7 +102,7 @@
                     body: JSON.stringify({
                         userId: els.uid.value,
                         newPassword,
-                        newSecret: cryptoRandom(), // you can ignore server-side if you prefer
+                        newSecret: cryptoRandom(),
                     }),
                 });
 

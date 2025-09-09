@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const RT_ROUNDS = process.env.RT_ROUNDS || 10;
 
 async function issueRefreshToken({RefreshToken, userId, aud, ip}) {
-    const raw = uuid() + '.' + uuid(); // opaque string
+    const raw = uuid() + '.' + uuid();
     const tokenHash = await bcrypt.hash(raw, RT_ROUNDS)
     const expiresAt = dayjs().add(Number(process.env.REFRESH_TTL_DAYS || 30), 'day').toDate()
     const jti = uuid();

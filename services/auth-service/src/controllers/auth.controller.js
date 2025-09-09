@@ -113,19 +113,26 @@ exports.refresh = async (req, res) => {
 
 exports.validate = async (req, res) => {
     try {
-        const aud = (req.query.aud || "").trim()
-        const verify = verifyAccessFor(aud)
+        const authorization = req.headers["authorization"] || "";
+        const token = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : null;
+        if (!token) {
+            return res.status(401).json(Unauthorized("Invalid Credentials"));
+        }
 
-        const authorization = req.headers["authorization"] || ""
-        const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : null;
-        if (!token) return res.status(401).json(Unauthorized("Invalid Credentials"));
+        const decoded = jwt.decode(token);
+        const aud = (decoded?.aud || decoded?.audience || "").toString().trim();
+        if (!aud) {
+            return res.status(401).json(Unauthorized("Missing audience in token"));
+        }
 
+        const verify = verifyAccessFor(aud);
         const claims = verify(token);
+
         res.json({valid: true, claims, audience: aud});
     } catch (e) {
         res.status(401).json(Unauthorized("Invalid or wrong audience"));
     }
-}
+};
 
 exports.logout = async (req, res) => {
     try {
@@ -154,7 +161,6 @@ exports.changePassword = async (req, res) => {
             return res.status(400).json(BadRequest("userId and newPassword (>=8 chars) required"));
         }
 
-        // verify short-lived verification/reset session (NOT access token)
         const authz = req.headers.authorization || "";
         const token = authz.startsWith("Bearer ") ? authz.slice(7) : null;
         if (!token) return res.status(401).json(Unauthorized("Invalid Credentials"));
@@ -170,14 +176,11 @@ exports.changePassword = async (req, res) => {
             return res.status(403).json(Forbidden("Not allowed"));
         }
 
-        // Load or init credentials
         let cred = await AuthCredential.findOne({userId}).lean();
         const rounds = Number((cred && cred.rounds) || process.env.BCRYPT_ROUNDS || 12);
 
-        // Choose (server-side) secret: keep existing or rotate on reset; rotating is safer
         const secret = cred?.secret || crypto.randomBytes(16).toString("hex");
 
-        // Enforce history (compare (newPassword+secret) vs current + last 3)
         const combinedNew = String(newPassword) + String(secret);
 
         if (cred?.passwordHash && await bcrypt.compare(combinedNew, cred.passwordHash)) {
@@ -199,7 +202,7 @@ exports.changePassword = async (req, res) => {
             {
                 $set: {
                     userId,
-                    secret, // keep or rotate; shown here keeping existing/created
+                    secret,
                     passwordHash: newHash,
                     passwordUpdatedAt: new Date(),
                     rounds,
@@ -210,7 +213,7 @@ exports.changePassword = async (req, res) => {
             {upsert: true}
         );
 
-        return res.sendStatus(204); // or res.redirect(302, "https://google.com")
+        return res.sendStatus(204);
     } catch (e) {
         console.error("[auth/change-password]", e);
         res.status(500).json(InternalServerError("Change password failed"));
@@ -242,7 +245,7 @@ exports.verifyCodeEndpoint = async (req, res) => {
             {
                 sub: String(user_id),
                 scope: purpose === "email_verify" ? "email-verify" : "password-reset",
-                eh: emailHash, // bind to current email
+                eh: emailHash,
             },
             process.env.JWT_SECRET,
             {expiresIn: mins(expiresMin)}
@@ -345,9 +348,8 @@ exports.requestPasswordReset = async (req, res) => {
             ttlMin: Number(process.env.CODE_TTL_MIN || 15),
         });
 
-        // Emit event for notification-service
         try {
-            await publish("auth.password_reset.requested.v1", {
+            await publish("users.created.v1", {
                 event: "auth.password_reset.requested",
                 user_id: String(user._id),
                 email: user.email,
@@ -359,9 +361,6 @@ exports.requestPasswordReset = async (req, res) => {
             console.error("[auth] publish reset event failed:", e.message);
         }
 
-        if (process.env.NODE_ENV === "development") {
-            return res.status(201).json({ok: true, code, ttlMin, purpose: "password_reset"});
-        }
         return res.sendStatus(204);
     } catch (e) {
         console.error("[auth/password-reset/request]", e);

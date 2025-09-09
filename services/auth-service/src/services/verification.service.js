@@ -13,7 +13,6 @@ exports.createCode = async ({VerificationCode, userId, email, purpose, ttlMin = 
     const emailHash = sha256b64(email);
     const expiresAt = new Date(Date.now() + ttlMin * 60 * 1000);
 
-    // invalidate previous active code for same purpose
     await VerificationCode.updateMany(
         {userId, purpose, consumedAt: null, expiresAt: {$gt: new Date()}},
         {$set: {consumedAt: new Date()}}

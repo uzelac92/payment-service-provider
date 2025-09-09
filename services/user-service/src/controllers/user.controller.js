@@ -1,5 +1,5 @@
 const svc = require('../services/user.service');
-
+const {publish} = require("../kafka/producer")
 
 let User;
 
@@ -9,7 +9,19 @@ async function init({user}) {
 
 async function create(req, res, next) {
     try {
-        res.status(201).json(await svc.create({User, data: req.body}));
+        const user = await svc.create({User, data: req.body});
+
+        try {
+            await publish("auth.password_reset.requested.v1", {
+                event: "auth.password_reset.requested",
+                user_id: String(user._id),
+                email: user.email,
+            }, user._id);
+        } catch (e) {
+            console.error("[auth] publish reset event failed:", e.message);
+        }
+
+        res.status(201).json(user);
     } catch (e) {
         next(e);
     }
