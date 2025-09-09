@@ -31,8 +31,6 @@ module.exports = function makeUserModel(conn) {
             },
 
             isActive: {type: Boolean, default: false, index: true},
-
-            // Optional, only if you want to track it here; otherwise move to auth
             lastLoginAt: {type: Date, default: Date.now},
         },
         {
