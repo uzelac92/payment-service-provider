@@ -2,7 +2,11 @@ require("dotenv").config();
 const app = require("./app")
 const {connectMongo} = require("./db/mongo")
 const ctrl = require('./controllers/auth.controller');
-const {makeRefreshTokenModel, makeAuthCredentialModel} = require('@uzelac92/payment-models');
+const {
+    makeRefreshTokenModel,
+    makeAuthCredentialModel,
+    makeVerificationCodeModel
+} = require('@uzelac92/payment-models');
 const {resolveUserByEmail} = require("./clients/user.client");
 
 const PORT = process.env.PORT || 4000;
@@ -13,10 +17,16 @@ const PORT = process.env.PORT || 4000;
     const conn = await connectMongo();
     const RefreshToken = makeRefreshTokenModel(conn);
     const AuthCredential = makeAuthCredentialModel(conn)
+    const VerificationCode = makeVerificationCodeModel(conn)
     console.log("Connected to database successfully!");
 
     console.log("Initializing controller...");
-    ctrl.init({refreshToken: RefreshToken, resolveUserByEmail, AuthCredentialModel: AuthCredential});
+    ctrl.init({
+        refreshToken: RefreshToken,
+        resolveUserByEmail,
+        AuthCredentialModel: AuthCredential,
+        VerificationCodeModel: VerificationCode,
+    });
 
     app.listen(PORT, () => {
         console.log(`STARTED auth-service on port ${PORT}`);
