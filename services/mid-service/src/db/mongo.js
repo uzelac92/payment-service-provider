@@ -1,36 +1,26 @@
 const mongoose = require('mongoose');
 
-let isConnected = false;
+let midConn;
 
-async function connectMongo(uri = process.env.MONGO_URI) {
+async function connectMidMongo(uri = process.env.MONGO_URI) {
     if (!uri) throw new Error("MongoDB URI is missing");
+    if (midConn) return midConn;
 
-    if (isConnected) return mongoose.connection;
-
-    const opts = {
+    midConn = mongoose.createConnection(uri,{
         maxPoolSize: 20,
-        minPoolSize: 2,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 20000
-    }
-
-    mongoose.connection.on("connected", () => {
-        isConnected = true;
-        console.log(`MongoDB Connected (${process.env.SERVICE_NAME || 'service'})`);
     })
 
-    mongoose.connection.on("disconnected", () => {
-        isConnected = false;
-        console.warn("Mongo Disconnected");
-    })
+    midConn.on('connected', () => console.log('[mid_db] connected'));
+    midConn.on('disconnected', () => console.warn('[mid_db] disconnected'));
+    midConn.on('error', (err) => console.error('[mid_db] error:', err));
 
-    mongoose.connection.on("error", (err) => {
-        isConnected = false;
-        console.error(`MongoDB Connection Error: ${err}`);
-    })
-
-    await mongoose.connect(uri, opts);
-    return mongoose.connection
+    return midConn.asPromise();
 }
 
-module.exports = {connectMongo}
+function getMidConn() {
+    return midConn;
+}
+
+module.exports = {connectMidMongo, getMidConn}
