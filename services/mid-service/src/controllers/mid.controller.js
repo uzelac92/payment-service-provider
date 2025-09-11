@@ -63,4 +63,12 @@ async function detach(req, res, next) {
     }
 }
 
-module.exports = {create, getAll, getSingle, update, remove, attach, detach, init};
+async function activation(req, res, next) {
+    try {
+        res.json(await svc.activation({Mid, id: req.params.id}));
+    } catch (e) {
+        next(e);
+    }
+}
+
+module.exports = {create, getAll, getSingle, update, remove, attach, detach, activation, init};

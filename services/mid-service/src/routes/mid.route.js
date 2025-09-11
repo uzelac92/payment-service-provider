@@ -1,5 +1,5 @@
 const express = require('express');
-const { create, getAll, getSingle, update, remove, attach, detach } = require('../controllers/mid.controller');
+const { create, getAll, getSingle, update, remove, attach, detach, activation } = require('../controllers/mid.controller');
 
 const router = express.Router();
 
@@ -10,5 +10,6 @@ router.delete('/:id', remove)
 router.put('/:id', update)
 router.put('/attach/:id', attach)
 router.put('/detach/:id', detach)
+router.get('/activation/:id', activation)
 
 module.exports = router;

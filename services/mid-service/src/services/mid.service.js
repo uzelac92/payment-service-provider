@@ -91,20 +91,17 @@ async function update({Mid, id, data}) {
 async function remove({Mid, id}) {
     //if(!mongoose.Types.ObjectId.isValid(id)) return BadRequest("Invalid id");
 
-    let res;
     try {
         await Mid.findByIdAndDelete(id);
         //res = await Mid.findByIdAndDelete(id);
     } catch (e) {
         //throw InternalServerError();
     }
-
-    //if (!res) throw NotFound("Mid not found for remove");
-    return true;
 }
 
 async function attachEmails({Mid, id, emails}) {
     //if(!id || !emails) throw new BadRequest("Emails and mid id are required");
+    //if(!mongoose.Types.ObjectId.isValid(id)) return BadRequest("Invalid id");
 
     const mid = await Mid.findById(id).lean();
     //if(!mid) throw new NotFound("Mid not found");
@@ -128,6 +125,7 @@ async function attachEmails({Mid, id, emails}) {
 
 async function detachEmails({Mid, id, emails}) {
     //if(!id || !emails) throw new BadRequest("Emails and mid id are required");
+    //if(!mongoose.Types.ObjectId.isValid(id)) return BadRequest("Invalid id");
 
     const mid = await Mid.findById(id).lean();
     //if(!mid) throw new NotFound("Mid not found");
@@ -149,4 +147,17 @@ async function detachEmails({Mid, id, emails}) {
     return updated;
 }
 
-module.exports = {getSingle, getAll, create, update, remove, attachEmails, detachEmails};
+async function activation({Mid, id}) {
+    //if(!mongoose.Types.ObjectId.isValid(id)) return BadRequest("Invalid id");
+
+    const mid = await Mid.findById(id).lean();
+    //if(!mid) throw new NotFound("Mid not found");
+
+    try {
+        await Mid.findByIdAndUpdate(id, {activity: !mid.active}, {new: true}).lean();
+    } catch (e) {
+        //throw InternalServerError();
+    }
+}
+
+module.exports = {getSingle, getAll, create, update, remove, attachEmails, detachEmails, activation};
