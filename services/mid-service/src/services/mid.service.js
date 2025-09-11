@@ -93,7 +93,6 @@ async function remove({Mid, id}) {
 
     try {
         await Mid.findByIdAndDelete(id);
-        //res = await Mid.findByIdAndDelete(id);
     } catch (e) {
         //throw InternalServerError();
     }
@@ -154,7 +153,7 @@ async function activation({Mid, id}) {
     //if(!mid) throw new NotFound("Mid not found");
 
     try {
-        await Mid.findByIdAndUpdate(id, {activity: !mid.active}, {new: true}).lean();
+        await Mid.findByIdAndUpdate(id, {active: !mid.active}, {new: true}).lean();
     } catch (e) {
         //throw InternalServerError();
     }

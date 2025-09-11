@@ -49,7 +49,7 @@ async function remove(req, res, next) {
 
 async function attach(req, res, next) {
     try {
-        res.json(await svc.attachEmails({Mid, id: req.params.id, emails: req.body.emails}));
+        res.status(200).json(await svc.attachEmails({Mid, id: req.params.id, emails: req.body.emails}));
     } catch (e) {
         next(e);
     }
@@ -57,7 +57,7 @@ async function attach(req, res, next) {
 
 async function detach(req, res, next) {
     try {
-        res.json(await svc.detachEmails({Mid, id: req.params.id, emails: req.body.emails}));
+        res.status(200).json(await svc.detachEmails({Mid, id: req.params.id, emails: req.body.emails}));
     } catch (e) {
         next(e);
     }
@@ -65,7 +65,7 @@ async function detach(req, res, next) {
 
 async function activation(req, res, next) {
     try {
-        res.json(await svc.activation({Mid, id: req.params.id}));
+        res.status(200).json(await svc.activation({Mid, id: req.params.id}));
     } catch (e) {
         next(e);
     }
