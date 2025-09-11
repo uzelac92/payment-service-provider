@@ -69,7 +69,7 @@ async function getSingle({Mid, query}) {
 async function update({Mid, id, data}) {
     //if (!mongoose.Types.ObjectId.isValid(id)) return BadRequest("Invalid id");
 
-    const ALLOWED = ["label", "emails", "active"];
+    const ALLOWED = ["label", "active"];
     const safePatch = Object.fromEntries(
         Object.entries(data || {})
             .filter(([k]) => ALLOWED.includes(k))
@@ -103,4 +103,50 @@ async function remove({Mid, id}) {
     return true;
 }
 
-module.exports = {getSingle, getAll, create, update, remove};
+async function attachEmails({Mid, id, emails}) {
+    //if(!id || !emails) throw new BadRequest("Emails and mid id are required");
+
+    const mid = await Mid.findById(id).lean();
+    //if(!mid) throw new NotFound("Mid not found");
+
+    let res = mid.emails;
+    for(let e of emails) {
+        //if(emails.includes(e)) throw new Conflict("Email already exists");
+        res += "," + e;
+    }
+
+    let updated;
+    try {
+        updated = await Mid.findByIdAndUpdate(id, {emails: res}, {new: true}).lean();
+    } catch (e) {
+        //throw InternalServerError();
+        throw e;
+    }
+
+    return updated;
+}
+
+async function detachEmails({Mid, id, emails}) {
+    //if(!id || !emails) throw new BadRequest("Emails and mid id are required");
+
+    const mid = await Mid.findById(id).lean();
+    //if(!mid) throw new NotFound("Mid not found");
+
+    let res = mid.emails.split(",")
+    for(const e of emails) {
+        //if(!emails.includes(e)) throw new Conflict("Email does not exist");
+        res = res.filter(email => email !== e);
+    }
+
+    let updated;
+    try {
+        updated = await Mid.findByIdAndUpdate(id, {emails: res.join(",")}, {new: true}).lean();
+    } catch (e) {
+        //throw InternalServerError();
+        throw e;
+    }
+
+    return updated;
+}
+
+module.exports = {getSingle, getAll, create, update, remove, attachEmails, detachEmails};
