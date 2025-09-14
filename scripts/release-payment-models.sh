@@ -44,7 +44,6 @@ if [[ "$DRYRUN" == "true" ]]; then
   echo "🧪 Dry run:"; printf '  %q ' "${CMD[@]}"; echo; exit 0
 fi
 
-# Bump package.json only
 "${CMD[@]}"
 
 NEW_VER="$(node -p "require('./package.json').version")"
