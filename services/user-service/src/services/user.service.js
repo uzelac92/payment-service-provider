@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const {InternalServerError, BadRequest, NotFound, Conflict} = require("@uzelac92/payment-models");
+const {InternalServerError, BadRequest, NotFound, Conflict, Forbidden} = require("@uzelac92/payment-models");
 
 function parseBool(v) {
     if (v === undefined) return undefined;
@@ -7,12 +7,11 @@ function parseBool(v) {
 }
 
 async function create({User, data}) {
-    if (!data?.email || !data?.password) throw BadRequest("Email and password are required");
+    if (!data?.email) throw BadRequest("Email is required");
 
     const payload = {
         name: data.name?.trim(),
         email: String(data.email).toLowerCase(),
-        password: data.password,
         isActive: data.isActive ?? false,
     };
 
@@ -46,7 +45,8 @@ async function getAll({User, q = {}}) {
             User.find(filter).sort({createdAt: -1}).skip(skip).limit(limit).lean({getters: true}),
             User.countDocuments(filter),
         ]);
-        return {items, total, page, limit};
+        const hasMore = items.length === limit;
+        return {items, total, page, limit, hasMore};
     } catch (e) {
         if (e?.status) throw e;
         throw InternalServerError();
@@ -61,17 +61,40 @@ async function getSingle({User, query}) {
         if (query.id && mongoose.Types.ObjectId.isValid(query.id)) {
             user = await User.findById(query.id).lean();
         } else if (query.email) {
-            user = await User.findOne({email: String(query.email).toLowerCase()}).lean();
+            user = await User.findByEmailNormalized(query.email).lean();
         }
     } catch (e) {
         if (e?.status) throw e;
         throw InternalServerError();
     }
 
-    // ⬇️ outside the try: no “throw caught locally” warning
     if (!user) throw NotFound("User not found");
-    if (user.isActive === false) throw BadRequest("User is not active");
+    if (user.isActive === false) throw Forbidden("User is not active");
     return user;
+}
+
+async function resolveByEmail({User, key, email = ""}) {
+    if (key !== process.env.USER_SERVICE_KEY) {
+        throw Forbidden("Invalid service key");
+    }
+    const trimmed = String(email || "").toLowerCase().trim();
+    if (!trimmed) throw BadRequest("Invalid email address");
+
+    let user;
+    try {
+        user = await User.findByEmailNormalized(trimmed).lean();
+    } catch (e) {
+        if (e?.status) throw e;
+        throw InternalServerError();
+    }
+
+    if (!user) throw NotFound("User not found");
+
+    return {
+        _id: user._id,
+        email: user.email,
+        isActive: !!user.isActive,
+    };
 }
 
 async function update({User, id, data}) {
@@ -93,7 +116,6 @@ async function update({User, id, data}) {
         throw InternalServerError();
     }
 
-    // ⬇️ outside the try
     if (!updated) throw NotFound("User not found");
     return updated;
 }
@@ -109,9 +131,8 @@ async function remove({User, id}) {
         throw InternalServerError();
     }
 
-    // ⬇️ outside the try
     if (!res) throw NotFound("User not found");
     return true;
 }
 
-module.exports = {create, getAll, getSingle, update, remove};
+module.exports = {create, getAll, getSingle, update, remove, resolveByEmail};

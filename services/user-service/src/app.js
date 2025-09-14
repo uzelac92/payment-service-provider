@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const hpp = require("hpp");
 const morgan = require("morgan");
 const routes = require("./routes/user.route");
+const internalRoutes = require("./routes/internal.route");
 
 const app = express();
 
@@ -19,6 +20,8 @@ if (process.env.NODE_ENV === "development") app.use(morgan("dev"));
 else app.use(morgan("tiny"));
 
 app.use("/users", routes);
+
+app.use("/internal/users", internalRoutes);
 
 app.use((req, res) => {
     res.status(404).json({error: 'NotFound', message: `Route ${req.method} ${req.originalUrl} not found`});

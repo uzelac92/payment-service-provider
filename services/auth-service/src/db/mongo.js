@@ -1,12 +1,11 @@
 const mongoose = require("mongoose");
 
-let authConn;
-let userConn;
+let isConnected = false;
 
-async function connectAuthMongo(uri = process.env.MONGO_URI) {
+async function connectMongo(uri = process.env.MONGO_URI) {
     if (!uri) throw new Error("MongoDB URI is required");
 
-    if (authConn) return authConn;
+    if (isConnected) return mongoose.connection;
 
     const opts = {
         maxPoolSize: 20,
@@ -15,58 +14,23 @@ async function connectAuthMongo(uri = process.env.MONGO_URI) {
         socketTimeoutMS: 20000
     }
 
-    authConn = mongoose.createConnection(uri, opts)
-
-    authConn.on("connected", () => {
+    mongoose.connection.on("connected", () => {
+        isConnected = true;
         console.log("MongoDB Connected");
     })
 
-    authConn.on("disconnected", () => {
+    mongoose.connection.on("disconnected", () => {
+        isConnected = false;
         console.warn("MongoDB Disconnected");
     })
 
-    authConn.on("error", (err) => {
+    mongoose.connection.on("error", (err) => {
+        isConnected = false;
         console.error(`MongoDB Connection Error: ${err}`);
     })
 
-    return authConn.asPromise()
+    await mongoose.connect(uri, opts);
+    return mongoose.connection
 }
 
-async function connectUserMongo(uri = process.env.USER_DB_URL) {
-    if (!uri) throw new Error("MongoDB URI is required");
-
-    if (userConn) return userConn;
-
-    const opts = {
-        maxPoolSize: 20,
-        minPoolSize: 2,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 20000
-    }
-
-    userConn = mongoose.createConnection(uri, opts)
-
-    userConn.on("connected", () => {
-        console.log("MongoDB Connected");
-    })
-
-    userConn.on("disconnected", () => {
-        console.warn("MongoDB Disconnected");
-    })
-
-    userConn.on("error", (err) => {
-        console.error(`MongoDB Connection Error: ${err}`);
-    })
-
-    return userConn.asPromise()
-}
-
-function getAuthConn() {
-    return authConn;
-}
-
-function getUserConn() {
-    return userConn;
-}
-
-module.exports = {connectAuthMongo, connectUserMongo, getAuthConn, getUserConn};
+module.exports = {connectMongo};
